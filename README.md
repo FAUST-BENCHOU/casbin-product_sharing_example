@@ -1,23 +1,16 @@
-# Casbin 产品共享示例
+# Casbin Product Sharing Example
 
-这个示例演示了如何使用 Casbin 实现基于属性的访问控制（ABAC）来管理产品共享功能。
+This example demonstrates how to use Casbin to implement Attribute-Based Access Control (ABAC) for managing product sharing functionality.
 
-## 功能特性
 
-- **产品创建**: 用户可以创建产品并成为所有者
-- **产品共享**: 产品所有者可以将产品共享给其他用户
-- **权限控制**: 基于产品所有者和共享用户列表进行访问控制
-- **动态权限**: 权限可以实时添加和移除，无需重启服务
+## Architecture Design
 
-## 架构设计
+### Why Choose ABAC over RBAC?
 
-### 为什么选择 ABAC 而不是 RBAC？
+**ABAC Advantages**: Dynamic permissions, attribute-based, flexible expansion. 
+**RBAC Problems**: Requires predefined roles, complex maintenance, poor scalability.
 
-1. **动态权限**: 产品共享关系是动态的，不是预定义的角色
-2. **基于属性**: 权限基于产品的 `Owner` 和 `SharedUsers` 属性
-3. **灵活性**: 可以轻松添加新的共享用户，无需修改策略配置
-
-### 权限模型
+### Permission Model
 
 ```
 [request_definition]
@@ -30,101 +23,86 @@ p = sub, obj, act
 e = some(where (p.eft == allow))
 
 [matchers]
-m = (r.sub == r.obj.Owner) || (r.sub in r.obj.SharedUsers)
+m = (r.sub == r.obj.Owner) || contains(r.obj.SharedUsers, r.sub)
 ```
 
-**权限规则解释**:
-- `r.sub == r.obj.Owner`: 产品所有者拥有完全访问权限
-- `r.sub in r.obj.SharedUsers`: 共享用户拥有访问权限
-- 支持的操作: `read`, `write` 等
+**Permission Rule Explanation**:
+- `r.sub == r.obj.Owner`: Product owner has full access permissions
+- `r.sub in r.obj.SharedUsers`: Shared users have access permissions
+- Supported operations: `read`, `write`, etc.
 
-## 文件结构
+## File Structure
 
 ```
 product_sharing_example/
-├── model.conf              # Casbin 模型配置
-├── product.go              # 产品结构体和方法
-├── product_service.go      # 产品服务逻辑
-├── main.go                 # 主程序示例
-├── product_service_test.go # 测试文件
-└── README.md               # 说明文档
+├── model.conf              # Casbin model configuration
+├── product.go              # Product struct and methods
+├── product_service.go      # Product service logic
+├── main.go                 # Main program example
+├── product_service_test.go # Test files
+└── README.md               # Documentation
 ```
 
-## 使用方法
+## Usage
 
-### 1. 运行示例
+### 1. Run Example
 
 ```bash
 cd product_sharing_example
 go run .
 ```
 
-### 2. 运行测试
+### 2. Run Tests
 
 ```bash
 go test -v
 ```
 
-### 3. 集成到你的项目
+### 3. Integrate into Your Project
 
 ```go
-// 创建产品服务
+// Create product service
 service, err := NewProductService()
 if err != nil {
     log.Fatal(err)
 }
 defer service.Close()
 
-// 创建产品
-product, err := service.CreateProduct("prod_001", "产品名称", "user@example.com")
+// Create product
+product, err := service.CreateProduct("prod_001", "Product Name", "user@example.com")
 if err != nil {
     log.Fatal(err)
 }
 
-// 共享产品
+// Share product
 err = service.ShareProduct("prod_001", "user@example.com", "other@example.com")
 if err != nil {
     log.Fatal(err)
 }
 
-// 检查权限
+// Check permissions
 canAccess := service.CanAccessProduct("other@example.com", "prod_001", "read")
 ```
 
-## API 接口
+## API Interface
 
 ### ProductService
 
-- `CreateProduct(id, name, ownerID)`: 创建新产品
-- `GetProduct(id)`: 获取产品信息
-- `ShareProduct(productID, ownerID, targetUserID)`: 共享产品
-- `UnshareProduct(productID, ownerID, targetUserID)`: 取消共享
-- `CanAccessProduct(userID, productID, action)`: 检查访问权限
-- `ListUserProducts(userID)`: 列出用户的产品
+- `CreateProduct(id, name, ownerID)`: Create new product
+- `GetProduct(id)`: Get product information
+- `ShareProduct(productID, ownerID, targetUserID)`: Share product
+- `UnshareProduct(productID, ownerID, targetUserID)`: Unshare product
+- `CanAccessProduct(userID, productID, action)`: Check access permissions
+- `ListUserProducts(userID)`: List user's products
 
 ### Product
 
-- `AddSharedUser(userID)`: 添加共享用户
-- `RemoveSharedUser(userID)`: 移除共享用户
-- `IsSharedUser(userID)`: 检查是否是共享用户
-- `GetSharedUsers()`: 获取所有共享用户
+- `AddSharedUser(userID)`: Add shared user
+- `RemoveSharedUser(userID)`: Remove shared user
+- `IsSharedUser(userID)`: Check if user is a shared user
+- `GetSharedUsers()`: Get all shared users
 
-## 扩展建议
-
-1. **权限级别**: 可以添加不同的权限级别（如只读、读写、管理等）
-2. **时间限制**: 可以添加共享的过期时间
-3. **审计日志**: 记录所有的权限变更操作
-4. **批量操作**: 支持批量共享和取消共享
-5. **通知系统**: 当产品被共享时通知相关用户
-
-## 注意事项
-
-1. **并发安全**: 使用互斥锁保护共享数据
-2. **错误处理**: 所有操作都有适当的错误处理
-3. **内存管理**: 产品数据存储在内存中，生产环境建议使用数据库
-4. **性能**: 对于大量产品，可以考虑使用缓存优化权限检查
-
-## 依赖
+## Dependencies
 
 - Go 1.16+
 - github.com/casbin/casbin/v2

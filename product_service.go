@@ -2,58 +2,65 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"sync"
 
 	"github.com/casbin/casbin/v2"
 	"github.com/casbin/casbin/v2/model"
-	fileadapter "github.com/casbin/casbin/v2/persist/file-adapter"
 )
 
-// ProductService 产品服务
+// ProductService product service
 type ProductService struct {
 	enforcer *casbin.Enforcer
 	products map[string]*Product
 	mu       sync.RWMutex
 }
 
-// NewProductService 创建产品服务
+// NewProductService creates a new product service
 func NewProductService() (*ProductService, error) {
-	// 创建模型
-	m, err := model.NewModelFromFile("model.conf")
+	// Create model
+	m, err := model.NewModelFromString(`
+		[request_definition]
+		r = sub, obj, act
+
+		[policy_definition]
+		p = sub, obj, act
+
+		[policy_effect]
+		e = some(where (p.eft == allow))
+
+		[matchers]
+		m = (r.sub == r.obj.Owner) || contains(r.obj.SharedUsers, r.sub)
+	`)
 	if err != nil {
-		return nil, fmt.Errorf("创建模型失败: %v", err)
+		return nil, fmt.Errorf("failed to create model: %v", err)
 	}
 
-	// 创建enforcer
-	enforcer, err := casbin.NewEnforcer(m, fileadapter.NewAdapter(""))
+	// Create enforcer
+	enforcer, err := casbin.NewEnforcer(m)
 	if err != nil {
-		return nil, fmt.Errorf("创建enforcer失败: %v", err)
+		return nil, fmt.Errorf("failed to create enforcer: %v", err)
 	}
 
-	// 添加自定义函数
+	// Add custom function
 	enforcer.AddFunction("contains", func(args ...interface{}) (interface{}, error) {
+		// First parameter should be string array, second parameter is the string to find
 		if len(args) != 2 {
 			return false, nil
 		}
-
-		// 第一个参数应该是字符串数组，第二个参数是要查找的字符串
-		sharedUsers, ok := args[0].([]string)
+		users, ok := args[0].([]string)
 		if !ok {
 			return false, nil
 		}
-
-		targetUser, ok := args[1].(string)
+		user, ok := args[1].(string)
 		if !ok {
 			return false, nil
 		}
-
-		// 检查目标用户是否在共享用户列表中
-		for _, user := range sharedUsers {
-			if user == targetUser {
+		for _, u := range users {
+			if u == user {
 				return true, nil
 			}
 		}
-
 		return false, nil
 	})
 
@@ -63,97 +70,101 @@ func NewProductService() (*ProductService, error) {
 	}, nil
 }
 
-// CreateProduct 创建产品
-func (ps *ProductService) CreateProduct(id, name, ownerID string) (*Product, error) {
-	ps.mu.Lock()
-	defer ps.mu.Unlock()
-
-	if _, exists := ps.products[id]; exists {
-		return nil, fmt.Errorf("产品ID %s 已存在", id)
-	}
-
-	product := NewProduct(id, name, ownerID)
-	ps.products[id] = product
-
-	fmt.Printf("产品 %s 已创建，所有者: %s\n", name, ownerID)
-	return product, nil
-}
-
-// GetProduct 获取产品
-func (ps *ProductService) GetProduct(id string) (*Product, error) {
-	ps.mu.RLock()
-	defer ps.mu.RUnlock()
-
-	product, exists := ps.products[id]
-	if !exists {
-		return nil, fmt.Errorf("产品 %s 不存在", id)
-	}
-
-	return product, nil
-}
-
-// ShareProduct 共享产品给其他用户
+// ShareProduct shares a product with another user
 func (ps *ProductService) ShareProduct(productID, ownerID, targetUserID string) error {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
 	product, exists := ps.products[productID]
 	if !exists {
-		return fmt.Errorf("产品 %s 不存在", productID)
+		return fmt.Errorf("product %s does not exist", productID)
 	}
 
 	if product.Owner != ownerID {
-		return fmt.Errorf("只有产品所有者可以共享产品")
+		return fmt.Errorf("user %s is not the owner of product %s", ownerID, productID)
 	}
 
-	if ownerID == targetUserID {
-		return fmt.Errorf("不能共享给自己")
+	// Check if target user is already in shared users list
+	for _, user := range product.SharedUsers {
+		if user == targetUserID {
+			return fmt.Errorf("user %s is already a shared user", targetUserID)
+		}
 	}
 
 	return product.AddSharedUser(targetUserID)
 }
 
-// UnshareProduct 取消产品共享
-func (ps *ProductService) UnshareProduct(productID, ownerID, targetUserID string) error {
+// CreateProduct creates a new product
+func (ps *ProductService) CreateProduct(id, name, ownerID string) (*Product, error) {
 	ps.mu.Lock()
 	defer ps.mu.Unlock()
 
-	product, exists := ps.products[productID]
-	if !exists {
-		return fmt.Errorf("产品 %s 不存在", productID)
+	if _, exists := ps.products[id]; exists {
+		return nil, fmt.Errorf("product ID %s already exists", id)
 	}
 
-	if product.Owner != ownerID {
-		return fmt.Errorf("只有产品所有者可以取消共享")
-	}
+	product := NewProduct(id, name, ownerID)
+	ps.products[id] = product
 
-	return product.RemoveSharedUser(targetUserID)
+	fmt.Printf("Product %s created, owner: %s\n", name, ownerID)
+	return product, nil
 }
 
-// CanAccessProduct 检查用户是否可以访问产品
-func (ps *ProductService) CanAccessProduct(userID, productID, action string) bool {
+// GetProduct gets a product by ID
+func (ps *ProductService) GetProduct(id string) (*Product, error) {
 	ps.mu.RLock()
-	product, exists := ps.products[productID]
-	ps.mu.RUnlock()
+	defer ps.mu.RUnlock()
 
+	product, exists := ps.products[id]
 	if !exists {
+		return nil, fmt.Errorf("product %s does not exist", id)
+	}
+
+	return product, nil
+}
+
+// CanAccessProduct checks if a user can access a product
+func (ps *ProductService) CanAccessProduct(userID, productID, action string) bool {
+	product, err := ps.GetProduct(productID)
+	if err != nil {
 		return false
 	}
 
-	// 使用Casbin进行权限检查
-	allowed, err := ps.enforcer.Enforce(userID, product, action)
+	// Create a request for Casbin
+	request := []interface{}{userID, product, action}
+	allowed, err := ps.enforcer.Enforce(request...)
 	if err != nil {
-		fmt.Printf("权限检查失败: %v\n", err)
+		log.Printf("Error checking permission: %v", err)
 		return false
 	}
 
 	return allowed
 }
 
-// ListUserProducts 列出用户的产品（拥有的和共享的）
-func (ps *ProductService) ListUserProducts(userID string) (owned []*Product, shared []*Product) {
+// UnshareProduct unshares a product from a user
+func (ps *ProductService) UnshareProduct(productID, ownerID, targetUserID string) error {
+	ps.mu.Lock()
+	defer ps.mu.Unlock()
+
+	product, exists := ps.products[productID]
+	if !exists {
+		return fmt.Errorf("product %s does not exist", productID)
+	}
+
+	if product.Owner != ownerID {
+		return fmt.Errorf("user %s is not the owner of product %s", ownerID, productID)
+	}
+
+	return product.RemoveSharedUser(targetUserID)
+}
+
+// ListUserProducts lists all products owned and shared by a user
+func (ps *ProductService) ListUserProducts(userID string) ([]*Product, []*Product) {
 	ps.mu.RLock()
 	defer ps.mu.RUnlock()
+
+	var owned []*Product
+	var shared []*Product
 
 	for _, product := range ps.products {
 		if product.Owner == userID {
@@ -166,7 +177,7 @@ func (ps *ProductService) ListUserProducts(userID string) (owned []*Product, sha
 	return owned, shared
 }
 
-// Close 关闭服务
+// Close closes the product service
 func (ps *ProductService) Close() {
-	// Casbin enforcer 不需要显式关闭
+	// Clean up resources if needed
 }

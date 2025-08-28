@@ -5,7 +5,7 @@ import (
 	"sync"
 )
 
-// Product 表示一个产品
+// Product represents a product
 type Product struct {
 	ID          string   `json:"id"`
 	Name        string   `json:"name"`
@@ -14,7 +14,7 @@ type Product struct {
 	mu          sync.RWMutex
 }
 
-// NewProduct 创建新产品
+// NewProduct creates a new product
 func NewProduct(id, name, owner string) *Product {
 	return &Product{
 		ID:          id,
@@ -24,15 +24,15 @@ func NewProduct(id, name, owner string) *Product {
 	}
 }
 
-// AddSharedUser 添加共享用户
+// AddSharedUser adds a shared user
 func (p *Product) AddSharedUser(userID string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
 	
-	// 检查用户是否已经是共享用户
+	// Check if user is already a shared user
 	for _, user := range p.SharedUsers {
 		if user == userID {
-			return fmt.Errorf("用户 %s 已经是共享用户", userID)
+			return fmt.Errorf("user %s is already a shared user", userID)
 		}
 	}
 	
@@ -40,7 +40,7 @@ func (p *Product) AddSharedUser(userID string) error {
 	return nil
 }
 
-// RemoveSharedUser 移除共享用户
+// RemoveSharedUser removes a shared user
 func (p *Product) RemoveSharedUser(userID string) error {
 	p.mu.Lock()
 	defer p.mu.Unlock()
@@ -52,10 +52,10 @@ func (p *Product) RemoveSharedUser(userID string) error {
 		}
 	}
 	
-	return fmt.Errorf("用户 %s 不是共享用户", userID)
+	return fmt.Errorf("user %s is not a shared user", userID)
 }
 
-// IsSharedUser 检查用户是否是共享用户
+// IsSharedUser checks if a user is a shared user
 func (p *Product) IsSharedUser(userID string) bool {
 	p.mu.RLock()
 	defer p.mu.RUnlock()
@@ -68,7 +68,7 @@ func (p *Product) IsSharedUser(userID string) bool {
 	return false
 }
 
-// GetSharedUsers 获取所有共享用户
+// GetSharedUsers gets all shared users
 func (p *Product) GetSharedUsers() []string {
 	p.mu.RLock()
 	defer p.mu.RUnlock()

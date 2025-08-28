@@ -6,133 +6,133 @@ import (
 )
 
 func main() {
-	fmt.Println("=== Casbin 产品共享示例 ===")
+	fmt.Println("=== Casbin Product Sharing Example ===")
 	fmt.Println()
 
-	// 创建产品服务
+	// Create product service
 	service, err := NewProductService()
 	if err != nil {
-		log.Fatalf("创建产品服务失败: %v", err)
+		log.Fatalf("Failed to create product service: %v", err)
 	}
 	defer service.Close()
 
-	// 创建一些用户
+	// Create some users
 	user1 := "user1@example.com"
 	user2 := "user2@example.com"
 	user3 := "user3@example.com"
 
-	fmt.Println("1. 创建产品...")
+	fmt.Println("1. Creating products...")
 
-	// 用户1创建产品
+	// User1 creates products
 	product1, err := service.CreateProduct("prod_001", "iPhone 15", user1)
 	if err != nil {
-		log.Fatalf("创建产品失败: %v", err)
+		log.Fatalf("Failed to create product: %v", err)
 	}
 
 	product2, err := service.CreateProduct("prod_002", "MacBook Pro", user1)
 	if err != nil {
-		log.Fatalf("创建产品失败: %v", err)
+		log.Fatalf("Failed to create product: %v", err)
 	}
 
-	// 用户2创建产品
+	// User2 creates product
 	product3, err := service.CreateProduct("prod_003", "iPad Pro", user2)
 	if err != nil {
-		log.Fatalf("创建产品失败: %v", err)
+		log.Fatalf("Failed to create product: %v", err)
 	}
 
 	fmt.Println()
 
-	fmt.Println("2. 测试权限控制...")
+	fmt.Println("2. Testing permission control...")
 
-	// 测试用户1访问自己的产品
-	fmt.Printf("用户 %s 访问产品 %s (read): %t\n",
+	// Test user1 accessing their own product
+	fmt.Printf("User %s accessing product %s (read): %t\n",
 		user1, product1.Name, service.CanAccessProduct(user1, product1.ID, "read"))
 
-	fmt.Printf("用户 %s 访问产品 %s (write): %t\n",
+	fmt.Printf("User %s accessing product %s (write): %t\n",
 		user1, product1.Name, service.CanAccessProduct(user1, product1.ID, "write"))
 
-	// 测试用户2访问用户1的产品（应该被拒绝）
-	fmt.Printf("用户 %s 访问产品 %s (read): %t\n",
+	// Test user2 accessing user1's product (should be denied)
+	fmt.Printf("User %s accessing product %s (read): %t\n",
 		user2, product1.Name, service.CanAccessProduct(user2, product1.ID, "read"))
 
-	// 测试用户3访问用户2的产品（应该被拒绝）
-	fmt.Printf("用户 %s 访问产品 %s (read): %t\n",
+	// Test user3 accessing user2's product (should be denied)
+	fmt.Printf("User %s accessing product %s (read): %t\n",
 		user3, product3.Name, service.CanAccessProduct(user3, product3.ID, "read"))
 
 	fmt.Println()
 
-	fmt.Println("3. 共享产品...")
+	fmt.Println("3. Sharing products...")
 
-	// 用户1将产品1共享给用户2
+	// User1 shares product1 with user2
 	err = service.ShareProduct(product1.ID, user1, user2)
 	if err != nil {
-		log.Printf("共享产品失败: %v", err)
+		log.Printf("Failed to share product: %v", err)
 	} else {
-		fmt.Printf("产品 %s 已共享给用户 %s\n", product1.Name, user2)
+		fmt.Printf("Product %s has been shared with user %s\n", product1.Name, user2)
 	}
 
-	// 用户1将产品2共享给用户3
+	// User1 shares product2 with user3
 	err = service.ShareProduct(product2.ID, user1, user3)
 	if err != nil {
-		log.Printf("共享产品失败: %v", err)
+		log.Printf("Failed to share product: %v", err)
 	} else {
-		fmt.Printf("产品 %s 已共享给用户 %s\n", product2.Name, user3)
+		fmt.Printf("Product %s has been shared with user %s\n", product2.Name, user3)
 	}
 
 	fmt.Println()
 
-	fmt.Println("4. 测试共享后的权限...")
+	fmt.Println("4. Testing permissions after sharing...")
 
-	// 测试用户2访问共享的产品
-	fmt.Printf("用户 %s 访问共享产品 %s (read): %t\n",
+	// Test user2 accessing shared product
+	fmt.Printf("User %s accessing shared product %s (read): %t\n",
 		user2, product1.Name, service.CanAccessProduct(user2, product1.ID, "read"))
 
-	fmt.Printf("用户 %s 访问共享产品 %s (write): %t\n",
+	fmt.Printf("User %s accessing shared product %s (write): %t\n",
 		user2, product1.Name, service.CanAccessProduct(user2, product1.ID, "write"))
 
-	// 测试用户3访问共享的产品
-	fmt.Printf("用户 %s 访问共享产品 %s (read): %t\n",
+	// Test user3 accessing shared product
+	fmt.Printf("User %s accessing shared product %s (read): %t\n",
 		user3, product2.Name, service.CanAccessProduct(user3, product2.ID, "read"))
 
 	fmt.Println()
 
-	fmt.Println("5. 列出用户的产品...")
+	fmt.Println("5. Listing user products...")
 
-	// 列出用户1的产品
+	// List user1's products
 	owned1, shared1 := service.ListUserProducts(user1)
-	fmt.Printf("用户 %s 拥有的产品: %d 个\n", user1, len(owned1))
+	fmt.Printf("User %s owned products: %d\n", user1, len(owned1))
 	for _, p := range owned1 {
 		fmt.Printf("  - %s (ID: %s)\n", p.Name, p.ID)
 	}
-	fmt.Printf("用户 %s 共享的产品: %d 个\n", user1, len(shared1))
+	fmt.Printf("User %s shared products: %d\n", user1, len(shared1))
 
-	// 列出用户2的产品
+	// List user2's products
 	owned2, shared2 := service.ListUserProducts(user2)
-	fmt.Printf("用户 %s 拥有的产品: %d 个\n", user2, len(owned2))
+	fmt.Printf("User %s owned products: %d\n", user2, len(owned2))
 	for _, p := range owned2 {
 		fmt.Printf("  - %s (ID: %s)\n", p.Name, p.ID)
 	}
-	fmt.Printf("用户 %s 共享的产品: %d 个\n", user2, len(shared2))
+	fmt.Printf("User %s shared products: %d\n", user2, len(shared2))
 	for _, p := range shared2 {
-		fmt.Printf("  - %s (ID: %s, 所有者: %s)\n", p.Name, p.ID, p.Owner)
+		fmt.Printf("  - %s (ID: %s, Owner: %s)\n", p.Name, p.ID, p.Owner)
 	}
 
 	fmt.Println()
 
-	fmt.Println("6. 取消共享...")
+	fmt.Println("6. Unsharing products...")
 
-	// 用户1取消与用户2的共享
+	// User1 unshares with user2
 	err = service.UnshareProduct(product1.ID, user1, user2)
 	if err != nil {
-		log.Printf("取消共享失败: %v", err)
+		log.Printf("Failed to unshare product: %v", err)
 	} else {
-		fmt.Printf("产品 %s 已取消与用户 %s 的共享\n", product1.Name, user2)
+		fmt.Printf("Product %s has been unshared with user %s\n", product1.Name, user2)
 	}
 
-	// 测试取消共享后的权限
-	fmt.Printf("用户 %s 访问已取消共享的产品 %s (read): %t\n",
+	// Test permissions after unsharing
+	fmt.Printf("User %s accessing unshared product %s (read): %t\n",
 		user2, product1.Name, service.CanAccessProduct(user2, product1.ID, "read"))
 
 	fmt.Println()
-	fmt.Println("=== 示例完成 ===")
+	fmt.Println("=== Example completed ===")
 }
