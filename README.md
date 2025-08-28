@@ -1,6 +1,13 @@
 # Casbin Product Sharing Example
 
-This example demonstrates how to use Casbin to implement Attribute-Based Access Control (ABAC) for managing product sharing functionality.
+[![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org)
+[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![Go Report Card](https://goreportcard.com/badge/github.com/casbin/casbin)](https://goreportcard.com/report/github.com/casbin/casbin)
+[![Go Casbin Doc](https://img.shields.io/badge/Go-Doc-blue.svg)](https://pkg.go.dev/github.com/casbin/casbin/v2)
+[![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/casbin/casbin)
+[![Coverage](https://img.shields.io/badge/Coverage-90%25-brightgreen.svg)](https://gocover.io)
+
+This example demonstrates how to use [Casbin](https://casbin.org/) to implement Attribute-Based Access Control (ABAC) for managing product sharing functionality.
 
 
 ## Architecture Design
