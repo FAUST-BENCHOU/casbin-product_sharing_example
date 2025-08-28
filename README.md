@@ -1,7 +1,6 @@
 # Casbin Product Sharing Example
 
 [![Go Version](https://img.shields.io/badge/Go-1.21+-blue.svg)](https://golang.org)
-[![License](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![Go Report Card](https://goreportcard.com/badge/github.com/casbin/casbin)](https://goreportcard.com/report/github.com/casbin/casbin)
 [![Go Casbin Doc](https://img.shields.io/badge/Go-Doc-blue.svg)](https://pkg.go.dev/github.com/casbin/casbin/v2)
 [![Build Status](https://img.shields.io/badge/Build-Passing-brightgreen.svg)](https://github.com/casbin/casbin)
